@@ -31,7 +31,7 @@ def health_check():
 
 @app.route('/writer', methods=['POST'])
 def timeline_writer():
-    logging.debug('timeline.service: /writer')
+    logging.info('timeline.service: /writer')
 
     # Verify that the push request originates from Cloud Pub/Sub.
     try:
@@ -41,6 +41,11 @@ def timeline_writer():
 
         claim = id_token.verify_oauth2_token(token, requests.Request(),
                                              audience='example.com')
+
+        # Verify administrator rights
+        if claim['sub'] != os.environ['ADMIN_UID']:
+            logging.error('Error: you do not have administrator right.')
+
         # Must also verify the `iss` claim.
         if claim['iss'] not in [
             'accounts.google.com',
@@ -64,6 +69,7 @@ def timeline_writer():
         .collection(u'timeline').document(activity_id)
     doc_ref.set(payload)
 
+    logging.info('timeline.service: /writer={'+activity_id+', '+target_user+'} is complete.')
     return 'OK', 200
 
 
